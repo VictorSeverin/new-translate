@@ -1,27 +1,20 @@
 {
-  "name": "new-translate",
-  "version": "0.1.0",
+  "name": "my-project",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.2.4"
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:server\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "npm run build:frontend && npm run build:server",
+    "start:frontend": "cd frontend && npm start",
+    "start:server": "cd server && npm start",
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:server\""
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.4",
-    "@eslint/eslintrc": "^3"
-  }
+    "concurrently": "^8.0.1"
+  },
+  "dependencies": {}
 }
