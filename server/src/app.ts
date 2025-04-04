@@ -4,7 +4,9 @@ import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import apiRoutes from "./routes";
-
+import { CustomError } from "./types";
+import { Server } from "socket.io";
+//const { initSocketServer } = require("../websockets/socket");
 // Initialize Express app
 const app: Express = express();
 
@@ -14,7 +16,7 @@ app.use(helmet());
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000/live",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -37,7 +39,7 @@ if (process.env.NODE_ENV !== "test") {
 app.use("/api", apiRoutes);
 
 // Health check endpoint
-app.get("/health", (req: Request, res: Response) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
@@ -50,17 +52,19 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error("Error:", err);
+app.use(
+  (err: CustomError, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("Error:", err);
 
-  const statusCode = "statusCode" in err ? (err as any).statusCode : 500;
-  const message = err.message || "Internal Server Error";
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-  res.status(statusCode).json({
-    error: err.name || "Error",
-    message,
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
-  });
-});
+    res.status(statusCode).json({
+      error: err.name || "Error",
+      message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    });
+  }
+);
 
 export default app;

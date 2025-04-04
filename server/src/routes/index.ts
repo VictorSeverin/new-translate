@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 
 const router = Router();
 
@@ -7,7 +7,7 @@ const router = Router();
 // import userRoutes from './user.routes';
 
 // Root API endpoint
-router.get("/", (req, res) => {
+router.get("/", (req: Request, res: Response) => {
   res.json({
     message: "API is working",
     version: "1.0.0",

@@ -96,6 +96,24 @@ export default function OrgDashboard() {
     }).format(date);
   };
 
+  const startStreaming = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const pc = new RTCPeerConnection();
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    console.log(stream.getTracks());
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const response = await fetch("/start-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sdp: offer.sdp }),
+    });
+
+    const answer = await response.json();
+    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
@@ -346,6 +364,7 @@ export default function OrgDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <Button onClick={startStreaming}>Start Straming</Button>
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">Marketing Webinar</h3>

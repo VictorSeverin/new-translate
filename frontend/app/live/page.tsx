@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
+import { socket } from "@/lib/socket";
 const languages = [
   { id: "en", name: "English" },
   { id: "es", name: "Spanish" },
@@ -57,93 +57,41 @@ export default function LiveTranslation({
   const [fontSize, setFontSize] = useState(18);
   const [fontFamily, setFontFamily] = useState(fontOptions[0].id);
 
-  const socketRef = useRef<WebSocket | null>(null);
   const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize WebSocket connection
-  /*useEffect(() => {
-    // Create WebSocket connection to echo server with session ID in query param
-    const socket = new WebSocket(
-      `wss://echo.websocket.org?session=${params.id}`
-    );
+  const [isConnected, setIsConnected] = useState(false);
+  const [transport, setTransport] = useState("N/A");
 
-    socket.onopen = () => {
-      console.log(`WebSocket connection established for session ${params.id}`);
-      // Send initial message with session info and language preferences
-      socket.send(
-        JSON.stringify({
-          type: "init",
-          sessionId: params.id,
-          sourceLanguage,
-          targetLanguage,
-        })
-      );
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        // Mock response simulating server data
-        // In production, parse event.data instead
-        const mockResponse = {
-          sourceText: `This is sample text in ${
-            languages.find((l) => l.id === sourceLanguage)?.name
-          } for session ${
-            params.id
-          }. It contains multiple sentences to demonstrate the word-by-word animation effect. The animation should look smooth and professional, similar to how Copilot displays text.`,
-          translatedText: `This is sample text translated to ${
-            languages.find((l) => l.id === targetLanguage)?.name
-          } for session ${
-            params.id
-          }. It contains multiple sentences to demonstrate the word-by-word animation effect. The animation should look smooth and professional, similar to how Copilot displays text.`,
-        };
-
-        // Update source text immediately without animation
-        setSourceText(mockResponse.sourceText);
-
-        // Store full translated text and start word-by-word animation
-        setTranslatedText(mockResponse.translatedText);
-        animateWordByWord(mockResponse.translatedText);
-      } catch (error) {
-        console.error("Error processing message:", error);
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    socket.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
-
-    // Store socket reference for cleanup
-    socketRef.current = socket;
-
-    // Cleanup function to close socket and clear animations
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
-
-      if (animationTimerRef.current) {
-        clearTimeout(animationTimerRef.current);
-      }
-    };
-  }, [sourceLanguage, targetLanguage, params.id]);
-
-  // Send language preference updates to server
   useEffect(() => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: "languageChange",
-          sessionId: params.id,
-          sourceLanguage,
-          targetLanguage,
-        })
-      );
+    console.log("useEffect");
+    console.log(socket);
+
+    function onConnect() {
+      console.log("connected");
+      setIsConnected(true);
+      setTransport(socket.io.engine.transport.name);
     }
-  }, [sourceLanguage, targetLanguage, params.id]);*/
+
+    function onFont(data) {
+      console.log("font", data);
+    }
+
+    // Register all event listeners
+    socket.on("connect", onConnect);
+    socket.on("pong", onFont);
+    socket.on("disconnect", () => console.log("disconnected"));
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+
+    // Cleanup function to remove listeners when component unmounts
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("font", onFont);
+      socket.off("disconnect");
+      socket.off("connect_error");
+    };
+  }, []);
 
   // Animate text appearing word by word with fade-in effect
   const animateWordByWord = (text: string) => {
@@ -214,9 +162,13 @@ export default function LiveTranslation({
     fontSize: `${fontSize}px`,
     fontFamily: getSelectedFontFamily(),
   };
+  function handleEmit() {
+    console.log("emitting");
+    socket.emit("font", { data: "data" });
+  }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row h-screen w-full overflow-hidden relative">
       {/* Universal Settings Button */}
       <div className="absolute top-4 right-4 z-10">
         <Popover>
@@ -280,7 +232,12 @@ export default function LiveTranslation({
       </div>
 
       {/* Source Panel */}
-      <div className="flex flex-col w-1/2 h-full border-r">
+      <div className="flex flex-col w-full lg:w-1/2 h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r">
+        <p onClick={() => socket.emit("font", { data: "data" })}>
+          Status: {isConnected ? "connected" : "disconnected"}
+        </p>
+        <p>Transport: {transport}</p>
+        <Button onClick={handleEmit}>Emit</Button>
         <div className="p-4 border-b">
           <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
             <SelectTrigger className="w-[180px]">
@@ -309,7 +266,7 @@ export default function LiveTranslation({
       </div>
 
       {/* Translation Panel */}
-      <div className="flex flex-col w-1/2 h-full">
+      <div className="flex flex-col w-full lg:w-1/2 h-1/2 lg:h-full">
         <div className="p-4 border-b">
           <Select value={targetLanguage} onValueChange={setTargetLanguage}>
             <SelectTrigger className="w-[180px]">
